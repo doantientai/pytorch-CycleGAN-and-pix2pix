@@ -1,3 +1,5 @@
 ### 001_edge2shoe
 python train.py --dataroot /media/tai/6TB/Projects/InfoMUNIT/Data/edges2shoes --name 001_edge2shoe --model cycle_gan --batch_size 32 --load_size 64 --crop_size 64 --continue_train --epoch_count 115
 
+## 002_edge2bag
+CUDA_VISIBLE_DEVICES="3" python train.py --dataroot /home/jupyter/workdir/TaiDoan/Projects/InfoMUNIT_workshop/Data/edges2handbags/ --name 002_edge2bag --model cycle_gan --batch_size 32 --load_size 64 --crop_size 64
