@@ -1,0 +1,3 @@
+### 001_edge2shoe
+python train.py --dataroot /media/tai/6TB/Projects/InfoMUNIT/Data/edges2shoes --name 001_edge2shoe --model cycle_gan --batch_size 32 --load_size 64 --crop_size 64 --continue_train --epoch_count 115
+
