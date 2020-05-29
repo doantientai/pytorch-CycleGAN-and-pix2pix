@@ -20,7 +20,7 @@ class UnalignedDataset(BaseDataset):
         """Initialize this dataset class.
 
         Parameters:
-            opt -- stores all the experiment flags; needs to be a subclass of BaseOptions
+            opt (Option class) -- stores all the experiment flags; needs to be a subclass of BaseOptions
         """
         BaseDataset.__init__(self, opt)
         self.dir_A = os.path.join(opt.dataroot, opt.phase + 'A')  # create a path '/path/to/data/trainA'
@@ -33,20 +33,20 @@ class UnalignedDataset(BaseDataset):
         btoA = self.opt.direction == 'BtoA'
         input_nc = self.opt.output_nc if btoA else self.opt.input_nc       # get the number of channels of input image
         output_nc = self.opt.input_nc if btoA else self.opt.output_nc      # get the number of channels of output image
-        self.transform_A = get_transform(opt, grayscale=(input_nc == 1))   # if nc == 1, we convert RGB to grayscale image
-        self.transform_B = get_transform(opt, grayscale=(output_nc == 1))  # if nc == 1, we convert RGB to grayscale image
+        self.transform_A = get_transform(self.opt, grayscale=(input_nc == 1))
+        self.transform_B = get_transform(self.opt, grayscale=(output_nc == 1))
 
     def __getitem__(self, index):
         """Return a data point and its metadata information.
 
         Parameters:
-            index - - a random integer for data indexing
+            index (int)      -- a random integer for data indexing
 
         Returns a dictionary that contains A, B, A_paths and B_paths
-            A(tensor) - - an image in the input domain
-            B(tensor) - - its corresponding image in the target domain
-            A_paths(str) - - image paths
-            B_paths(str) - - image paths
+            A (tensor)       -- an image in the input domain
+            B (tensor)       -- its corresponding image in the target domain
+            A_paths (str)    -- image paths
+            B_paths (str)    -- image paths
         """
         A_path = self.A_paths[index % self.A_size]  # make sure index is within then range
         if self.opt.serial_batches:   # make sure index is within then range
@@ -59,6 +59,7 @@ class UnalignedDataset(BaseDataset):
         # apply image transformation
         A = self.transform_A(A_img)
         B = self.transform_B(B_img)
+
         return {'A': A, 'B': B, 'A_paths': A_path, 'B_paths': B_path}
 
     def __len__(self):

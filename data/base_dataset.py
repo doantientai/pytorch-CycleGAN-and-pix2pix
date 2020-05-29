@@ -2,6 +2,8 @@
 
 It also includes common transformation functions (e.g., get_transform, __scale_width), which can be later used in subclasses.
 """
+import random
+import numpy as np
 import torch.utils.data as data
 from PIL import Image
 import torchvision.transforms as transforms
@@ -11,18 +13,18 @@ from abc import ABC, abstractmethod
 class BaseDataset(data.Dataset, ABC):
     """This class is an abstract base class (ABC) for datasets.
 
-    To create a subclass, you need to implement four functions:
-    -- <__init__> (initialize the class, first call BaseDataset.__init__(self, opt))
-    -- <__len__> (return the size of dataset)
-    -- <__getitem__>　(get a data point)
-    -- (optionally) <modify_commandline_options> (add dataset-specific options and set default options).
+    To create a subclass, you need to implement the following four functions:
+    -- <__init__>:                      initialize the class, first call BaseDataset.__init__(self, opt).
+    -- <__len__>:                       return the size of dataset.
+    -- <__getitem__>:                   get a data point.
+    -- <modify_commandline_options>:    (optionally) add dataset-specific options and set default options.
     """
 
     def __init__(self, opt):
         """Initialize the class; save the options in the class
 
         Parameters:
-            opt -- stores all the experiment flags; needs to be a subclass of BaseOptions
+            opt (Option class)-- stores all the experiment flags; needs to be a subclass of BaseOptions
         """
         self.opt = opt
         self.root = opt.dataroot
@@ -32,8 +34,8 @@ class BaseDataset(data.Dataset, ABC):
         """Add new dataset-specific options, and rewrite default values for existing options.
 
         Parameters:
-            parser -- original option parser
-            is_train -- whether training phase or test phase. You can use this flag to add training-specific or test-specific options.
+            parser          -- original option parser
+            is_train (bool) -- whether training phase or test phase. You can use this flag to add training-specific or test-specific options.
 
         Returns:
             the modified parser.
@@ -58,85 +60,91 @@ class BaseDataset(data.Dataset, ABC):
         pass
 
 
-def get_transform(opt, grayscale=False, convert=True, crop=True, flip=True):
-    """Create a torchvision transformation function
+def get_params(opt, size):
+    w, h = size
+    new_h = h
+    new_w = w
+    if opt.preprocess == 'resize_and_crop':
+        new_h = new_w = opt.load_size
+    elif opt.preprocess == 'scale_width_and_crop':
+        new_w = opt.load_size
+        new_h = opt.load_size * h // w
 
-    The type of transformation is defined by option(e.g., [preprocess], [load_size], [crop_size])
-    and can be overwritten by arguments such as [convert], [crop], and [flip]
-    """
+    x = random.randint(0, np.maximum(0, new_w - opt.crop_size))
+    y = random.randint(0, np.maximum(0, new_h - opt.crop_size))
+
+    flip = random.random() > 0.5
+
+    return {'crop_pos': (x, y), 'flip': flip}
+
+
+def get_transform(opt, params=None, grayscale=False, method=Image.BICUBIC, convert=True):
     transform_list = []
     if grayscale:
         transform_list.append(transforms.Grayscale(1))
-    if opt.preprocess == 'resize_and_crop':
+    if 'resize' in opt.preprocess:
         osize = [opt.load_size, opt.load_size]
-        transform_list.append(transforms.Resize(osize, Image.BICUBIC))
-        transform_list.append(transforms.RandomCrop(opt.crop_size))
-    elif opt.preprocess == 'crop' and crop:
-        transform_list.append(transforms.RandomCrop(opt.crop_size))
-    elif opt.preprocess == 'scale_width':
-        transform_list.append(transforms.Lambda(lambda img: __scale_width(img, opt.crop_size)))
-    elif opt.preprocess == 'scale_width_and_crop':
-        transform_list.append(transforms.Lambda(lambda img: __scale_width(img, opt.load_size)))
-        if crop:
-            transform_list.append(transforms.RandomCrop(opt.crop_size))
-    elif opt.preprocess == 'none':
-        transform_list.append(transforms.Lambda(lambda img: __adjust(img)))
-    else:
-        raise ValueError('--preprocess %s is not a valid option.' % opt.preprocess)
+        transform_list.append(transforms.Resize(osize, method))
+    elif 'scale_width' in opt.preprocess:
+        transform_list.append(transforms.Lambda(lambda img: __scale_width(img, opt.load_size, opt.crop_size, method)))
 
-    if not opt.no_flip and flip:
-        transform_list.append(transforms.RandomHorizontalFlip())
+    if 'crop' in opt.preprocess:
+        if params is None:
+            transform_list.append(transforms.RandomCrop(opt.crop_size))
+        else:
+            transform_list.append(transforms.Lambda(lambda img: __crop(img, params['crop_pos'], opt.crop_size)))
+
+    if opt.preprocess == 'none':
+        transform_list.append(transforms.Lambda(lambda img: __make_power_2(img, base=4, method=method)))
+
+    if not opt.no_flip:
+        if params is None:
+            transform_list.append(transforms.RandomHorizontalFlip())
+        elif params['flip']:
+            transform_list.append(transforms.Lambda(lambda img: __flip(img, params['flip'])))
+
     if convert:
-        transform_list += [transforms.ToTensor(),
-                           transforms.Normalize((0.5, 0.5, 0.5),
-                                                (0.5, 0.5, 0.5))]
+        transform_list += [transforms.ToTensor()]
+        if grayscale:
+            transform_list += [transforms.Normalize((0.5,), (0.5,))]
+        else:
+            transform_list += [transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
     return transforms.Compose(transform_list)
 
 
-def __adjust(img):
-    """Modify the width and height to be multiple of 4
-
-    the size needs to be a multiple of 4,
-    because going through generator network may change img size
-    and eventually cause size mismatch error
-    """
+def __make_power_2(img, base, method=Image.BICUBIC):
     ow, oh = img.size
-    mult = 4
-    if ow % mult == 0 and oh % mult == 0:
+    h = int(round(oh / base) * base)
+    w = int(round(ow / base) * base)
+    if h == oh and w == ow:
         return img
-    w = (ow - 1) // mult
-    w = (w + 1) * mult
-    h = (oh - 1) // mult
-    h = (h + 1) * mult
 
-    if ow != w or oh != h:
-        __print_size_warning(ow, oh, w, h)
-
-    return img.resize((w, h), Image.BICUBIC)
+    __print_size_warning(ow, oh, w, h)
+    return img.resize((w, h), method)
 
 
-def __scale_width(img, target_width):
-    """Resize images so that the width of the output image is the same as a target width
-
-    the size needs to be a multiple of 4,
-    because going through generator network may change img size
-    and eventually cause size mismatch error
-    """
+def __scale_width(img, target_size, crop_size, method=Image.BICUBIC):
     ow, oh = img.size
-
-    mult = 4
-    assert target_width % mult == 0, "the target width needs to be multiple of %d." % mult
-    if (ow == target_width and oh % mult == 0):
+    if ow == target_size and oh >= crop_size:
         return img
-    w = target_width
-    target_height = int(target_width * oh / ow)
-    m = (target_height - 1) // mult
-    h = (m + 1) * mult
+    w = target_size
+    h = int(max(target_size * oh / ow, crop_size))
+    return img.resize((w, h), method)
 
-    if target_height != h:
-        __print_size_warning(target_width, target_height, w, h)
 
-    return img.resize((w, h), Image.BICUBIC)
+def __crop(img, pos, size):
+    ow, oh = img.size
+    x1, y1 = pos
+    tw = th = size
+    if (ow > tw or oh > th):
+        return img.crop((x1, y1, x1 + tw, y1 + th))
+    return img
+
+
+def __flip(img, flip):
+    if flip:
+        return img.transpose(Image.FLIP_LEFT_RIGHT)
+    return img
 
 
 def __print_size_warning(ow, oh, w, h):
