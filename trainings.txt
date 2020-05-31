@@ -3,3 +3,7 @@ python train.py --dataroot /media/tai/6TB/Projects/InfoMUNIT/Data/edges2shoes --
 
 ## 002_edge2bag
 CUDA_VISIBLE_DEVICES="3" python train.py --dataroot /home/jupyter/workdir/TaiDoan/Projects/InfoMUNIT_workshop/Data/edges2handbags/ --name 002_edge2bag --model cycle_gan --batch_size 32 --load_size 64 --crop_size 64
+
+
+### 004_portrait
+python train.py --dataroot /media/tai/6TB/Projects/SOTAsDemos/DRIT/DRIT/datasets/portrait --name 004_portrait --model cycle_gan --batch_size 32 --load_size 64 --crop_size 64
