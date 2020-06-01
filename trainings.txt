@@ -11,3 +11,6 @@ CUDA_VISIBLE_DEVICES="3" python train.py --dataroot /home/jupyter/workdir/TaiDoa
 python train.py --dataroot /media/tai/6TB/Projects/SOTAsDemos/DRIT/DRIT/datasets/portrait --name 004_portrait --model cycle_gan --batch_size 32 --load_size 64 --crop_size 64
 # test
 python test.py --dataroot /media/tai/6TB/Projects/SOTAsDemos/DRIT/DRIT/datasets/portrait --name 004_portrait --model cycle_gan --load_size 64 --crop_size 64
+
+### 003_cat2dog
+CUDA_VISIBLE_DEVICES="2" /home/blaise/anaconda3/envs/pytorch0.4.1/bin/python train.py --dataroot /home/blaise/workdir/Tai/Projects/InfoMUNIT_workshop/Data/cat2dog --name 003_cat2dog --model cycle_gan --batch_size 32 --load_size 64 --crop_size 64 --display_id 0 --n_epochs 500 --n_epochs_decay 500
