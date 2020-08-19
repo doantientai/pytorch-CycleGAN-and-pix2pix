@@ -24,3 +24,6 @@ CUDA_VISIBLE_DEVICES="2" /home/blaise/anaconda3/envs/pytorch0.4.1/bin/python tra
 
 ### 012_edge2bag
 CUDA_VISIBLE_DEVICES="3" /home/blaise/anaconda3/envs/pytorch0.4.1/bin/python train.py --dataroot /home/blaise/workdir/Tai/Projects/InfoMUNIT_workshop/Data/edges2handbags --name 012_edge2bag --model cycle_gan --batch_size 4 --load_size 256 --crop_size 256 --display_id 0 --n_epochs 500 --n_epochs_decay 500
+
+### 013_edges2shoes
+CUDA_VISIBLE_DEVICES="0" /home/blaise/anaconda3/envs/pytorch0.4.1/bin/python train.py --dataroot /home/blaise/workdir/Tai/Projects/InfoMUNIT_workshop/Data/edges2shoes --name 013_edges2shoes --model cycle_gan --batch_size 4 --load_size 256 --crop_size 256 --display_id 0 --n_epochs 500 --n_epochs_decay 500
